@@ -1,41 +1,21 @@
-# SimpleDb JDBC 과제
+# SimpleDb JDBC
 
-순수 JDBC로 만든 경량 MySQL 유틸리티입니다. `SimpleDb`는 커넥션과 트랜잭션을 관리하고, `Sql`은 SQL 조립, 파라미터 바인딩, 실행, 조회 결과 매핑을 담당합니다.
+순수 JDBC로 MySQL을 다루는 경량 DB 유틸리티 과제입니다.  
+`SimpleDb`는 커넥션과 트랜잭션을 관리하고, `Sql`은 SQL 작성과 실행을 담당합니다.
 
-## 필요한 개발 환경
+## 개발 환경
 
-- JDK 21
-- Gradle 또는 IntelliJ IDEA의 Gradle 실행 기능
-- Docker Desktop
-- MySQL Docker 컨테이너
-- IDE 추천: IntelliJ IDEA
+- Java 21
+- Gradle
+- MySQL
+- JUnit 5
+- AssertJ
+- Jackson
+- IntelliJ IDEA
 
-현재 터미널에는 `gradle` 명령이 설치되어 있지 않습니다. IntelliJ에서 프로젝트를 열면 Gradle을 자동 인식해서 테스트를 실행할 수 있고, 터미널에서 실행하려면 Gradle을 설치하거나 Gradle Wrapper를 추가해야 합니다.
+## 실행 준비
 
-## IntelliJ에서 열기
-
-1. IntelliJ IDEA 실행
-2. `Open` 선택
-3. 아래 폴더 선택
-
-```txt
-/Users/apple/Documents/Codex/simple-db-jdbc
-```
-
-4. Gradle 프로젝트로 import될 때까지 기다리기
-5. Project SDK를 Java 21로 설정
-   - `File > Project Structure > Project > SDK`
-6. `SimpleDbTest` 파일을 열고 테스트 실행
-
-테스트 파일 위치:
-
-```txt
-src/test/java/com/back/simpleDb/SimpleDbTest.java
-```
-
-## MySQL 실행
-
-과제 안내에 맞춰 macOS에서는 `-v` 옵션 없이 실행합니다.
+MySQL Docker 컨테이너를 실행합니다.
 
 ```bash
 docker run \
@@ -47,19 +27,11 @@ docker run \
   mysql
 ```
 
-이미 같은 이름의 컨테이너가 있으면 다음 명령으로 시작합니다.
-
-```bash
-docker start mysql-1
-```
-
-## 테스트 DB 생성
+테스트용 DB를 생성합니다.
 
 ```bash
 docker exec -it mysql-1 mysql -uroot -proot123414
 ```
-
-MySQL 콘솔에서:
 
 ```sql
 CREATE DATABASE IF NOT EXISTS simpleDb__test;
@@ -67,38 +39,38 @@ CREATE DATABASE IF NOT EXISTS simpleDb__test;
 
 ## 테스트 실행
 
-Gradle이 설치되어 있다면:
-
 ```bash
-gradle test
+./gradlew test
 ```
 
-IntelliJ를 사용한다면:
+IntelliJ에서는 프로젝트를 연 뒤 `SimpleDbTest`를 실행하면 됩니다.
 
-1. `simple-db-jdbc` 폴더를 프로젝트로 열기
-2. Gradle import 완료 기다리기
-3. `src/test/java/com/back/simpleDb/SimpleDbTest.java` 실행
+## 주요 기능
 
-## 구현 구조
+- SQL 실행: `run`
+- SQL 빌더: `append`, `appendIn`
+- 데이터 변경: `insert`, `update`, `delete`
+- 단일 값 조회: `selectLong`, `selectString`, `selectBoolean`, `selectDatetime`
+- 행 조회: `selectRow`, `selectRows`
+- 객체 매핑: `selectRow(Class<T>)`, `selectRows(Class<T>)`
+- 트랜잭션: `startTransaction`, `commit`, `rollback`
+- 스레드별 커넥션 관리: `ThreadLocal<Connection>`
+
+## 프로젝트 구조
 
 ```txt
 src/main/java/com/back/
-├── Article.java                 # 테스트용 DTO
+├── Article.java
 └── simpleDb/
-    ├── SimpleDb.java            # 커넥션, 트랜잭션, 기본 SQL 실행
-    └── Sql.java                 # SQL 빌더, CRUD, 조회, DTO 매핑
+    ├── SimpleDb.java
+    └── Sql.java
 
 src/test/java/com/back/simpleDb/
-└── SimpleDbTest.java            # t001 ~ t019 테스트
+└── SimpleDbTest.java
 ```
 
-## 핵심 구현 포인트
+## 회고
 
-- `ThreadLocal<Connection>`으로 스레드별 커넥션을 분리했습니다.
-- 같은 스레드에서는 `close()` 전까지 같은 커넥션을 재사용합니다.
-- `startTransaction()`, `commit()`, `rollback()`은 현재 스레드의 커넥션을 기준으로 동작합니다.
-- `append(...)`는 SQL 조각과 바인딩 값을 순서대로 저장합니다.
-- `appendIn(...)`은 `IN (?)`, `FIELD(id, ?)` 같은 SQL에서 `?`를 값 개수만큼 펼칩니다.
-- `selectRows()`는 `List<Map<String, Object>>`로 조회 결과를 반환합니다.
-- `selectRows(Article.class)`처럼 DTO 클래스를 넘기면 Jackson으로 객체 매핑합니다.
-- MySQL `DATETIME`은 `LocalDateTime`, `BIT(1)`은 `Boolean`, 정수 값은 `Long` 중심으로 정규화합니다.
+처음에는 JDBC와 Connection 개념이 낯설어서 흐름을 이해하는 데 시간이 걸렸습니다.  
+테스트 코드를 하나씩 보면서 필요한 기능을 구현하니 어떤 기능이 왜 필요한지 조금씩 이해할 수 있었습니다.  
+아직 부족하지만 직접 에러를 고치면서 DB 연결, SQL 실행, 트랜잭션의 기본 구조를 배울 수 있었습니다.
